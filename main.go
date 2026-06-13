@@ -2,9 +2,11 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -224,8 +226,9 @@ func getYouTubeStreamURL(videoURL string) (string, string, error) {
 	if len(formats) == 0 {
 		return "", "", fmt.Errorf("no audio formats found for this video")
 	}
+	// Prefer audio/webm — WebM supports stdin piping; audio/mp4 requires seeking
 	for i := range formats {
-		if strings.HasPrefix(formats[i].MimeType, "audio/mp4") {
+		if strings.HasPrefix(formats[i].MimeType, "audio/webm") {
 			url, err := client.GetStreamURL(video, &formats[i])
 			if err != nil {
 				return "", "", err
@@ -275,7 +278,7 @@ func (p *GuildPlayer) playLoop(s *discordgo.Session, guildID string) {
 		if len(p.queue) == 0 {
 			p.mu.Unlock()
 			if p.vc != nil {
-				p.vc.Disconnect()
+				p.vc.Disconnect(context.Background())
 				p.vc = nil
 			}
 			return
@@ -285,7 +288,7 @@ func (p *GuildPlayer) playLoop(s *discordgo.Session, guildID string) {
 		p.mu.Unlock()
 
 		if p.vc == nil {
-			vc, err := s.ChannelVoiceJoin(guildID, track.VoiceChannelID, false, true)
+			vc, err := s.ChannelVoiceJoin(context.Background(), guildID, track.VoiceChannelID, false, true)
 			if err != nil {
 				fmt.Println("Error joining voice channel:", err)
 				continue
@@ -298,11 +301,24 @@ func (p *GuildPlayer) playLoop(s *discordgo.Session, guildID string) {
 }
 
 func (p *GuildPlayer) playTrack(t Track) {
+	req, err := http.NewRequest("GET", t.URL, nil)
+	if err != nil {
+		fmt.Println("Error creating HTTP request:", err)
+		return
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; discord-tunes)")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println("Error fetching audio stream:", err)
+		return
+	}
+	defer resp.Body.Close()
+
 	opts := *dca.StdEncodeOptions
 	opts.RawOutput = true
 	opts.Bitrate = 96
 
-	encSession, err := dca.EncodeFile(t.URL, &opts)
+	encSession, err := dca.EncodeMem(resp.Body, &opts)
 	if err != nil {
 		fmt.Println("Error encoding audio:", err)
 		return
@@ -318,6 +334,10 @@ func (p *GuildPlayer) playTrack(t Track) {
 		if err != nil && err != io.EOF {
 			fmt.Println("Error streaming audio:", err)
 		}
+	}
+
+	if encErr := encSession.Error(); encErr != nil {
+		fmt.Println("FFmpeg encode error:", encErr)
 	}
 }
 
