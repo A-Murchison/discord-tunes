@@ -5,6 +5,8 @@ go 1.26.4
 require (
 	github.com/bwmarrin/discordgo v0.29.1-0.20260214123928-f43dd94faaac
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757
+	github.com/zmb3/spotify/v2 v2.4.3
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (

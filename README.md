@@ -1,6 +1,15 @@
 # discord-tunes
 
-A Discord music bot that streams YouTube audio directly into voice channels.
+Discord music bot that streams YouTube or Spotify tunes directly into voice channels.
+
+Built with go.
+
+## Steps to play some tunes
+
+Join a voice channel
+
+1. !play https://www.youtube.com/watch?v=btPJPFnesV4
+2. jam out
 
 ## Requirements
 
@@ -13,20 +22,15 @@ A Discord music bot that streams YouTube audio directly into voice channels.
 1. Copy `.env.example` to `.env.local` and fill in your bot token:
 
    ```
-   DISCORD_TOKEN=your_bot_token_here
+    DISCORD_TOKEN=your_bot_token_here
+    SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+    SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
    ```
 
 2. Build the bot:
 
    ```
    go build .
-   ```
-
-3. Set the environment variable and run:
-   ```powershell
-   # PowerShell — load .env.local and run
-   Get-Content .env.local | ForEach-Object { $k,$v = $_ -split '=',2; [Environment]::SetEnvironmentVariable($k,$v) }
-   .\discord-tunes.exe
    ```
 
 ## Commands
@@ -46,3 +50,22 @@ A Discord music bot that streams YouTube audio directly into voice channels.
 
 - [`github.com/bwmarrin/discordgo`](https://github.com/bwmarrin/discordgo) (replaced by [A-Murchison/discordgo-fork](https://github.com/A-Murchison/discordgo-fork))
 - [`github.com/jonas747/ogg`](https://github.com/jonas747/ogg)
+
+## Why not `dca`?
+
+I tried to get this to work, I couldn't get it to work. Just a note for future contributors.
+
+The common approach for Discord audio bots in Go is to use the
+[`dca`](https://github.com/bwmarrin/dca) library, which wraps FFmpeg and produces
+DCA-framed Opus audio. I evaluated it and chose not to use it for two reasons:
+
+1. **Broken on FFmpeg 7+.** `dca` hardcodes `-vbr on` in its FFmpeg arguments. FFmpeg 7
+   changed VBR flag handling for `libopus`, causing `dca` to produce malformed or silent
+   output on modern FFmpeg builds.
+
+2. **Unnecessary abstraction.** `dca` exists to strip raw Opus packets out of FFmpeg
+   output and frame them for Discord. The same result is achieved more simply by having
+   FFmpeg encode directly to OGG (which is a standard Opus container) and decoding the
+   OGG packets with [`github.com/jonas747/ogg`](https://github.com/jonas747/ogg). This
+   gives us full control over FFmpeg arguments and removes a dependency with an active
+   upstream bug.
