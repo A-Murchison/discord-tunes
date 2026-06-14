@@ -1,15 +1,14 @@
 # discord-tunes
 
-Discord music bot that streams YouTube or Spotify tunes directly into voice channels.
+Discord music bot that streams YouTube or Spotify tunes directly into voice channels with DAVE (E2EE) https://daveprotocol.com/. 
 
 Built with go.
 
 ## Steps to play some tunes
 
-Join a voice channel
-
-1. !play https://www.youtube.com/watch?v=btPJPFnesV4
-2. jam out
+1. Join a voice channel
+2. Play a YouTube or Spotify song: ```!play https://www.youtube.com/watch?v=btPJPFnesV4```
+3. jam out
 
 ## Requirements
 
