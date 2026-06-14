@@ -2,6 +2,8 @@
 
 Discord music bot that streams YouTube or Spotify tunes directly into voice channels.
 
+Built with go.
+
 ## Steps to play some tunes
 
 Join a voice channel
