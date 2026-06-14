@@ -14,4 +14,4 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 )
 
-replace github.com/bwmarrin/discordgo => github.com/yeongaori/discordgo-fork v0.0.0-20260523084716-86ad19e070d2
+replace github.com/bwmarrin/discordgo => github.com/A-Murchison/discordgo-fork v0.0.0-20260614012940-c0df5b3fd55b

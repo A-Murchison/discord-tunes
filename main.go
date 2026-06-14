@@ -112,7 +112,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		for _, vs := range g.VoiceStates {
 			if vs.UserID == m.Author.ID {
 				player := getPlayer(g.ID)
-				if player.vc == nil {
+				player.mu.Lock()
+				vcNil := player.vc == nil
+				player.mu.Unlock()
+				if vcNil {
 					fmt.Printf("[test] Joining voice channel %s\n", vs.ChannelID)
 					vc, err := s.ChannelVoiceJoin(context.Background(), g.ID, vs.ChannelID, false, false)
 					if err != nil {
@@ -122,7 +125,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					}
 					fmt.Println("[test] Joined voice channel")
 					player.mu.Lock()
-					player.vc = vc
+					if player.vc == nil {
+						player.vc = vc
+					} else {
+						go vc.Disconnect(context.Background())
+					}
 					player.mu.Unlock()
 				}
 				s.ChannelMessageSend(m.ChannelID, "Playing test tone (440 Hz sine wave, 5 seconds)...")
@@ -510,8 +517,18 @@ func (p *GuildPlayer) streamOpus(label string, ffmpegInputArgs []string) {
 		}
 	}()
 
+	// Wait for DAVE E2E encryption key exchange to complete.
+	// Frames sent before DAVE is ready are not E2E-encrypted; Discord clients
+	// will silently drop them. dave == nil means DAVE is not active this session.
+	daveCtx, daveCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer daveCancel()
+	if err := p.vc.WaitForDAVEReady(daveCtx); err != nil {
+		fmt.Printf("%s Warning: DAVE not ready after 3s: %v — audio may be silent\n", label, err)
+	} else {
+		fmt.Printf("%s DAVE ready, streaming audio\n", label)
+	}
+
 	p.vc.Speaking(true)
-	ticker := time.NewTicker(20 * time.Millisecond)
 	framesSent := 0
 	streamStart := time.Now()
 	skipped := false
@@ -530,10 +547,12 @@ loop:
 				// Reader goroutine closed the channel — stream ended normally.
 				break loop
 			}
-			// Pace delivery: wait for the next 20 ms tick before sending.
+			// Push directly into OpusSend — the voice connection's opusSender
+			// goroutine has its own 20ms ticker and handles UDP pacing itself.
+			// Adding a second ticker here would double the interval (40ms) and
+			// cause Discord to receive frames at half rate, producing silence.
 			select {
-			case <-ticker.C:
-				p.vc.OpusSend <- frame
+			case p.vc.OpusSend <- frame:
 				framesSent++
 			case <-p.skip:
 				fmt.Printf("%s Skipped after %d frames\n", label, framesSent)
@@ -543,8 +562,6 @@ loop:
 			}
 		}
 	}
-
-	ticker.Stop()
 	p.vc.Speaking(false)
 
 	// Drain frameCh so the reader goroutine is never blocked trying to send.
