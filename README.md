@@ -1,6 +1,13 @@
 # discord-tunes
 
-A Discord music bot that streams YouTube audio directly into voice channels.
+Discord music bot that streams YouTube or Spotify tunes directly into voice channels.
+
+## Steps to play some tunes
+
+Join a voice channel
+
+1. !play https://www.youtube.com/watch?v=btPJPFnesV4
+2. jam out
 
 ## Requirements
 
@@ -44,9 +51,11 @@ A Discord music bot that streams YouTube audio directly into voice channels.
 
 ## Why not `dca`?
 
+I tried to get this to work, I couldn't get it to work. Just a note for future contributors.
+
 The common approach for Discord audio bots in Go is to use the
 [`dca`](https://github.com/bwmarrin/dca) library, which wraps FFmpeg and produces
-DCA-framed Opus audio. We evaluated it and chose not to use it for two reasons:
+DCA-framed Opus audio. I evaluated it and chose not to use it for two reasons:
 
 1. **Broken on FFmpeg 7+.** `dca` hardcodes `-vbr on` in its FFmpeg arguments. FFmpeg 7
    changed VBR flag handling for `libopus`, causing `dca` to produce malformed or silent
