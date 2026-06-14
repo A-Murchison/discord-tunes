@@ -4,7 +4,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -18,8 +17,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/ogg"
 )
-
-var token string
 
 var (
 	guildsMu sync.Mutex
@@ -40,16 +37,12 @@ type GuildPlayer struct {
 	playing bool
 }
 
-func init() {
-	flag.StringVar(&token, "t", "", "Token for bot")
-	flag.Parse()
-}
-
 // Main function
 func main() {
-
+	token := os.Getenv("DISCORD_TOKEN")
 	if token == "" {
-		fmt.Println("No token provided. Please set the token variable.")
+		fmt.Fprintln(os.Stderr, "DISCORD_TOKEN environment variable is not set")
+		os.Exit(1)
 	}
 
 	discord, err := discordgo.New("Bot " + token)
@@ -140,7 +133,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, "You must be in a voice channel to use `!test`.")
 	}
 
-	if strings.HasPrefix(m.Content, "!play") {
+	if strings.HasPrefix(m.Content, "!play") || strings.HasPrefix(m.Content, "!queue") {
 		g, shouldReturn := getGuild(s, m)
 		if shouldReturn {
 			return
@@ -152,33 +145,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				parts := strings.Fields(m.Content)
 				if len(parts) < 2 || (!strings.Contains(parts[1], "youtube.com") && !strings.Contains(parts[1], "youtu.be")) {
 					s.ChannelMessageSend(m.ChannelID, "Please provide a valid YouTube URL: `!play <YouTube URL>`")
-					return
-				}
-				title, err := getYouTubeTitle(parts[1])
-				if err != nil {
-					s.ChannelMessageSend(m.ChannelID, "Could not load that video: "+err.Error())
-					return
-				}
-				track := Track{URL: parts[1], Title: title, VoiceChannelID: vs.ChannelID}
-				getPlayer(g.ID).Enqueue(s, g.ID, track)
-				s.ChannelMessageSend(m.ChannelID, "Added to queue: **"+title+"**")
-				return
-			}
-		}
-	}
-
-	if strings.HasPrefix(m.Content, "!queue") {
-		g, shouldReturn := getGuild(s, m)
-		if shouldReturn {
-			return
-		}
-
-		// Look for the message sender in that guild's current voice states.
-		for _, vs := range g.VoiceStates {
-			if vs.UserID == m.Author.ID {
-				parts := strings.Fields(m.Content)
-				if len(parts) < 2 || (!strings.Contains(parts[1], "youtube.com") && !strings.Contains(parts[1], "youtu.be")) {
-					s.ChannelMessageSend(m.ChannelID, "Please provide a valid YouTube URL: `!queue <YouTube URL>`")
 					return
 				}
 				title, err := getYouTubeTitle(parts[1])
@@ -589,15 +555,7 @@ loop:
 	}
 }
 
-func queueSpotifySong(s1 *discordgo.Session, s2, s3 string) error {
-	// Placeholder for future Spotify queue support.
-	return nil
-}
 
-func playSpotifySong(s *discordgo.Session, guildID, channelID string) error {
-	// Placeholder for future Spotify playback support.
-	return nil
-}
 
 func stop(s *discordgo.Session, guildID string) error {
 	// Placeholder for future stop logic.
