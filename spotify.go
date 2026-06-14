@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -20,7 +21,7 @@ func initSpotify() error {
 	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
 	if clientID == "" || clientSecret == "" {
-		return fmt.Errorf("SPOTIFY_CLIENT_ID and/or SPOTIFY_CLIENT_SECRET not set — Spotify URLs will not work")
+		return fmt.Errorf("SPOTIFY_CLIENT_ID and/or SPOTIFY_CLIENT_SECRET not set - Spotify URLs will not work")
 	}
 
 	cfg := &clientcredentials.Config{
@@ -51,15 +52,24 @@ func resolveSpotifyURL(rawURL, voiceChannelID string) ([]Track, error) {
 		return nil, fmt.Errorf("invalid URL: %w", err)
 	}
 
-	// Strip query params (e.g. ?si=...) — the path is sufficient.
-	// Path is like /track/<id> or /playlist/<id>
+	// Strip query params (e.g. ?si=...) - the path is sufficient.
+	// Path may be /track/<id>, /playlist/<id>, or locale-prefixed like /intl-es/playlist/<id>.
 	parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
-	if len(parts) < 2 {
+
+	knownTypes := map[string]bool{"track": true, "playlist": true}
+	kindIdx := -1
+	for i, p := range parts {
+		if knownTypes[p] {
+			kindIdx = i
+			break
+		}
+	}
+	if kindIdx == -1 || kindIdx+1 >= len(parts) {
 		return nil, fmt.Errorf("could not parse Spotify URL path: %s", u.Path)
 	}
 
-	kind := parts[0]
-	id := spotify.ID(parts[1])
+	kind := parts[kindIdx]
+	id := spotify.ID(parts[kindIdx+1])
 
 	switch kind {
 	case "track":
@@ -71,11 +81,27 @@ func resolveSpotifyURL(rawURL, voiceChannelID string) ([]Track, error) {
 	}
 }
 
+// spotifyAPIError converts a zmb3/spotify API error into a user-friendly message.
+func spotifyAPIError(action string, err error) error {
+	var se *spotify.Error
+	if errors.As(err, &se) {
+		switch se.Status {
+		case 403:
+			return fmt.Errorf("Spotify: %s is private or restricted - set it to **Public** in Spotify and try again", action)
+		case 404:
+			return fmt.Errorf("Spotify: %s not found - check the URL is correct", action)
+		case 401:
+			return fmt.Errorf("Spotify: authentication failed - check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET")
+		}
+	}
+	return fmt.Errorf("Spotify: could not fetch %s: %w", action, err)
+}
+
 func resolveSpotifyTrack(id spotify.ID, voiceChannelID string) ([]Track, error) {
 	ctx := context.Background()
 	t, err := spotifyClient.GetTrack(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("Spotify: could not fetch track: %w", err)
+		return nil, spotifyAPIError("track", err)
 	}
 	query := spotifySearchQuery(t.Artists, t.Name)
 	return []Track{{
@@ -97,7 +123,7 @@ func resolveSpotifyPlaylist(id spotify.ID, voiceChannelID string) ([]Track, erro
 			spotify.Offset(offset),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("Spotify: could not fetch playlist: %w", err)
+			return nil, spotifyAPIError("playlist", err)
 		}
 
 		for _, item := range page.Items {
