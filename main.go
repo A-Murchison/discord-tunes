@@ -77,6 +77,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := initSpotify(); err != nil {
+		fmt.Fprintln(os.Stderr, "Warning:", err)
+	}
+
 	discord, err := discordgo.New("Bot " + token)
 	if err != nil {
 		fmt.Println(err)
@@ -93,6 +97,10 @@ func main() {
 
 	// We need information about guilds (which includes their channels) messages and voice states
 	discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates | discordgo.IntentsMessageContent
+
+	if err := initSpotify(); err != nil {
+		fmt.Fprintln(os.Stderr, "Warning:", err)
+	}
 
 	// Open the websocket
 	err = discord.Open()
@@ -175,16 +183,40 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		for _, vs := range g.VoiceStates {
 			if vs.UserID == m.Author.ID {
 				parts := strings.Fields(m.Content)
-				if len(parts) < 2 || (!strings.Contains(parts[1], "youtube.com") && !strings.Contains(parts[1], "youtu.be")) {
-					s.ChannelMessageSend(m.ChannelID, "Please provide a valid YouTube URL: `!play <YouTube URL>`")
+				if len(parts) < 2 {
+					s.ChannelMessageSend(m.ChannelID, "Please provide a YouTube or Spotify URL: `!play <URL>`")
 					return
 				}
-				title, err := getYouTubeTitle(parts[1])
+				inputURL := parts[1]
+
+				if isSpotifyURL(inputURL) {
+					tracks, err := resolveSpotifyURL(inputURL, vs.ChannelID)
+					if err != nil {
+						s.ChannelMessageSend(m.ChannelID, "Spotify error: "+err.Error())
+						return
+					}
+					player := getPlayer(g.ID)
+					for _, t := range tracks {
+						player.Enqueue(s, g.ID, t)
+					}
+					if len(tracks) == 1 {
+						s.ChannelMessageSend(m.ChannelID, "Added to queue: **"+tracks[0].Title+"**")
+					} else {
+						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Queued %d track(s) from Spotify", len(tracks)))
+					}
+					return
+				}
+
+				if !strings.Contains(inputURL, "youtube.com") && !strings.Contains(inputURL, "youtu.be") {
+					s.ChannelMessageSend(m.ChannelID, "Please provide a YouTube or Spotify URL: `!play <URL>`")
+					return
+				}
+				title, err := getYouTubeTitle(inputURL)
 				if err != nil {
 					s.ChannelMessageSend(m.ChannelID, "Could not load that video: "+err.Error())
 					return
 				}
-				track := Track{URL: parts[1], Title: title, VoiceChannelID: vs.ChannelID}
+				track := Track{URL: inputURL, Title: title, VoiceChannelID: vs.ChannelID}
 				getPlayer(g.ID).Enqueue(s, g.ID, track)
 				s.ChannelMessageSend(m.ChannelID, "Added to queue: **"+title+"**")
 				return
