@@ -37,6 +37,38 @@ type GuildPlayer struct {
 	playing bool
 }
 
+func init() {
+	// Read .env.local file if it exists and set the DISCORD_TOKEN environment variable for local development.
+	if _, err := os.Stat(".env.local"); err == nil {
+		data, err := os.ReadFile(".env.local")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error reading .env.local:", err)
+			return
+		}
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := strings.TrimSpace(parts[0])
+
+			if key == "DISCORD_TOKEN" && os.Getenv("DISCORD_TOKEN") != "" {
+				fmt.Fprintln(os.Stderr, "Warning: DISCORD_TOKEN is already set in the environment; ignoring value from .env.local")
+				continue
+			} else {
+				fmt.Fprintf(os.Stderr, "Setting environment variable from .env.local: %s=***\n", key)
+				value := strings.TrimSpace(parts[1])
+				os.Setenv(key, value)
+			}
+		}
+	}
+}
+
 // Main function
 func main() {
 	token := os.Getenv("DISCORD_TOKEN")
@@ -554,8 +586,6 @@ loop:
 		fmt.Printf("%s Finished: %d frames sent in %v\n", label, framesSent, time.Since(streamStart))
 	}
 }
-
-
 
 func stop(s *discordgo.Session, guildID string) error {
 	// Placeholder for future stop logic.
