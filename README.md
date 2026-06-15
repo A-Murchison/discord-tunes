@@ -2,7 +2,7 @@
 
 Discord music bot that streams YouTube or Spotify tunes directly into voice channels with DAVE (E2EE) https://daveprotocol.com/. 
 
-Built with go.
+Built with go. Made for fun.
 
 ## Steps to play some tunes
 
