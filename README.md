@@ -4,6 +4,15 @@ Discord music bot that streams YouTube or Spotify tunes directly into voice chan
 
 Built with Go. Made for fun.
 
+Command:
+
+<img width="678" height="130" alt="discord-tunes" src="https://github.com/user-attachments/assets/18616ec4-09ad-4576-83d8-17b3c17b7bdb" />
+
+Vibing:
+
+<img width="299" height="158" alt="vibe-discord-tunes" src="https://github.com/user-attachments/assets/4b5fad08-c81d-451e-9297-061ce9a9288d" />
+
+
 ## What it does
 
 - Joins the voice channel you are currently in
@@ -152,103 +161,6 @@ A successful startup looks like:
 Logged in as: yourbot#0000
 Bot is now running. Press CTRL-C to exit.
 Joined guild: Your Server
-```
-
-## Install dependencies
-
-### FFmpeg
-
-Linux DNF example:
-
-```bash
-sudo dnf update
-sudo dnf install ffmpeg
-```
-
-Linux apt example:
-
-```bash
-sudo apt update
-sudo apt install ffmpeg
-```
-
-macOS with Homebrew:
-
-```bash
-brew install ffmpeg
-```
-
-Windows with winget:
-
-```powershell
-winget install Gyan.FFmpeg
-```
-
-Windows with Chocolatey:
-
-```powershell
-choco install ffmpeg
-```
-
-After installing on Windows, open a new terminal so your updated `PATH` is loaded.
-
-Verify FFmpeg and `libopus` support:
-
-```bash
-ffmpeg -version
-ffmpeg -encoders | grep libopus
-```
-
-On Windows PowerShell, use:
-
-```powershell
-ffmpeg -encoders | Select-String libopus
-```
-
-### yt-dlp
-
-Linux DNF example:
-
-```bash
-sudo dnf install yt-dlp
-```
-
-Linux apt example:
-
-```bash
-sudo apt update
-sudo apt install yt-dlp
-```
-
-macOS with Homebrew:
-
-```bash
-brew install yt-dlp
-```
-
-Windows with winget:
-
-```powershell
-winget install yt-dlp.yt-dlp
-```
-
-Windows with Chocolatey:
-
-```powershell
-choco install yt-dlp
-```
-
-Standalone install, useful if your package manager has an old version:
-
-```bash
-sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-sudo chmod +x /usr/local/bin/yt-dlp
-```
-
-Verify:
-
-```bash
-yt-dlp --version
 ```
 
 
