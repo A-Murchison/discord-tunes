@@ -212,17 +212,6 @@ Make sure:
 - `yt-dlp` is installed and visible in `PATH`
 - The bot has **Connect** and **Speak** permissions in the voice channel
 
-## Notes on auto-installing yt-dlp
-
-Go itself does not have a safe build hook that runs arbitrary installers during `go build .`. This is intentional: building code should not unexpectedly modify the user's system.
-
-This repo supports a safer compromise:
-
-- `make build` checks for `yt-dlp`
-- If missing, it downloads a local copy into `.bin/yt-dlp`
-- `make run` automatically adds `.bin/` to `PATH`
-
-If you deploy the compiled binary somewhere else, install `yt-dlp` on that machine or include `.bin/yt-dlp` and add it to `PATH` before starting the bot.
 
 ## Dependencies
 
