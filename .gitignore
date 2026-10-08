@@ -1,2 +1,4 @@
 .env.local
+.bin/
+discord-tunes
 discord-tunes.exe
